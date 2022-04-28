@@ -1,0 +1,182 @@
+---
+title: "Analysis of Women Safety in Indian Cities Using Machine Learning on Tweets"
+---
+#Motivation and Overview:
+#Women have been encountering a part of viciousness and badgering in open places in different cities beginning from stalking and driving to sexual badgering or sexual ambush. This project essentially centers on the part of social media i.e., Twitter in advancing the security of ladies in Indian cities with uncommon reference to the part of social media websites and applications counting Twitter. Twitter and other handles which incorporate hash tag messages that are broadly spread over the total globe sir as a stage for ladies to precise their sees approximately how they feel secure or not? In this project we mainly focus on the role of social media which can be used to promote the safety of women. Also focuses on developing the responsibilities among the common people on the various parts of cities so that the safety of women around them is ensured.
+#Initial Questions:
+#What are number of negative tweets regarding woman harrassment. That would give us a level of abuse woman receive in the city.As we could understand the safety of woman in the city.
+#Data:
+#Tweeter data sets will be used to analyze the safety of women who lives in city, as it has become more popular and most of the young generation uses the most and provide freedom to post their opinion in short form. We carried out API from tweeter to accumulate each one of the tweets on tweeter which were named beneath lady harassment or woman prosperity hashtags or contained words like woman harassments and lady security.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RCurl)
+library(rtweet)
+library(tidyverse)
+library(tidytext)
+library(textdata)
+library(qdapRegex)
+library(twitteR)
+```
+#All Imports
+#RCurl - Is the implementation of cURL in R which is basically used to make API requests.
+#Rtweet - Twitter library (for data).
+#Tidyverse - for plotting graphs, and other data structures.
+#tidy text - text mining
+#Text data - Text Processor (core of sentiment analysis).
+#qdapRegex - processing regular expressions.
+#twitteR - for twitter API Access (for access).
+
+```{r}
+consumer_key = "yXqmCyt2Ac6jk5u9BBzrJAyfJ"
+consumer_secret = "2IRwhGdoaBJMPAEHPUSG5YHkTVVLOUFCABt7BxNOmkRbEC9cKT"
+access_token = "1227978897255325696-uA7eUF4ACCk5ONmf83fUucuWA4ri2z"
+access_secret  = "wyNw5NHVqFeSmkMVPVJw03zA5iTSh7vcYH5NLrI7PGv47"
+
+token <- create_token(app = "womantweets", consumer_key, consumer_secret,access_token,access_secret)
+## print token
+token
+```
+#First 4 lines are the declarations of the twitter account, will be provided by twitter developer forums
+#Create_token function instantiates the Twitter API and stores the returned Data inside “token” variable.
+#Next line prints token - can see the returned data.
+
+```{r}
+women_harrasment_tweets <- search_tweets("woman harassment in India" , n = 2000,env_name = "research",include_rts = TRUE)
+                       
+women_security_tweets <- search_tweets("lady security in India" , n = 2000 ,env_name = "research",include_rts = TRUE)
+
+total_tweets <- rbind(women_harrasment_tweets,women_security_tweets)
+
+total_tweets <- total_tweets %>% select(screen_name,text)
+```
+#Women_harrasment_tweets variable stores data returned from search_tweets function on hashtag of first parameter (women harassment in india) and number of tweets second parameter 2000.
+#Same with women_security_tweets.
+#total_tweets is the combined data frame of harassment tweets and security tweets.
+#%>% binds it to the screen name and text data from the person’s twitter.
+
+```{r}
+#Data preprocessing
+
+text_clean = function(x)
+{
+  # convert to lower case
+  x = tolower(x)
+  # remove rt
+  x = gsub("rt", "", x)
+  # remove at
+  x = gsub("@\\w+", "", x)
+  # remove punctuation
+  x = gsub("[[:punct:]]", "", x)
+  # remove numbers
+  x = gsub("[[:digit:]]", "", x)
+  # remove links http
+  x = gsub("http\\w+", "", x)
+  # remove tabs
+  x = gsub("[ |\t]{2,}", "", x)
+  # remove blank spaces at the beginning
+  x = gsub("^ ", "", x)
+  # remove blank spaces at the end
+  x = gsub(" $", "", x)
+  # some other cleaning text
+  x = gsub('https://','',x)
+  x = gsub('http://','',x)
+  x = gsub('[^[:graph:]]', ' ',x)
+  x = gsub('[[:punct:]]', '', x)
+  x = gsub('[[:cntrl:]]', '', x)
+  x = gsub('\\d+', '', x)
+  x = str_replace_all(x,"[^[:graph:]]", " ")
+  return(x)
+}
+#Text clean is the function accepting one parameter “x”.
+#Gsub, sub - sub is used to replace the first occurrence of a word with the second parameter in the function.
+#Gsub is used to replace all the occurrences of a particular word in the entire data.
+#("rt", "", x)
+#Rt gets replaced with “ ” (empty string) everywhere in “x”(x - whole text data).
+
+clean_Text <- text_clean(total_tweets$text)
+# remove empty results (if any)
+idx <- which(clean_Text == " ")
+clean_Text <- clean_Text[clean_Text != " "]
+#Text_clean function is called with “text” attribute in total_tweets variable and the cleaned result is stored in “clean_Text” variable.
+# total_tweets$text <-  gsub("https\\S*", "", total_tweets$text)
+# total_tweets$text <-  gsub("@\\S*", "", total_tweets$text) 
+# # total_tweets$stripped_text  <-  gsub("amp", "", total_tweets$text) 
+# total_tweets$text  <-  gsub("[\r\n]", "", total_tweets$text)
+# total_tweets$text  <-  gsub("[[:punct:]]", "", total_tweets$text)
+# total_tweets$text  <-  gsub("https\\S+\\s*", "", total_tweets$text)
+# total_tweets$text  <-  gsub("[[:digit:]]+", "", total_tweets$text)
+```
+
+```{r}
+clean_Text_stem_list <- rm_nchar_words(clean_Text, "1,3")
+
+clean_Text_df <- as.data.frame(clean_Text_stem_list)
+
+clean_Text_stem <- clean_Text_df %>% select(clean_Text_stem_list) %>% unnest_tokens(word , clean_Text_stem_list)
+
+```
+#First line means remove all words that are 3 letters and 1 letter and stores in clean_Text_stem_list.
+#clean_Text_df is the data of clean_Text_stem_list stored as a dataframe
+#clean_Text_stem <- clean_Text_df %>% select(clean_Text_stem_list) %>% unnest_tokens(word , clean_Text_stem_list) 
+#Now unnest_tokens means to split a column into tokens (singular values).
+#Select is used to extract a single column.
+#The total line means from  clean_Text_df, select clean_Text_stem_list row and tokenise them.
+
+
+```{r}
+get_sentiments(lexicon = "bing") %>% filter(sentiment == "positive")
+get_sentiments(lexicon = "bing") %>% filter(sentiment == "negative")
+
+bing_tweets <- clean_Text_stem %>% inner_join(get_sentiments(lexicon = "bing")) %>% count(word , sentiment , sort = TRUE) %>% ungroup()
+```
+#All sentiments are stored in a common table.
+#Inner join means tables having a common column and few other different data columns queried with the common column.
+
+
+```{r}
+bing_tweets %>% group_by(sentiment) %>% ungroup() %>% mutate(word = reorder(word , n)) %>% ggplot(aes(word ,n , fill = sentiment))+ geom_col(show.legend = FALSE) + facet_wrap(~sentiment,scales = "free_y")+ labs(title = "harrasment tweets", y = "Sentiment contribution") + coord_flip()
+```
+
+
+```{r}
+get_sentiments(lexicon = "afinn") %>% filter(value > 0)
+get_sentiments(lexicon = "afinn") %>% filter(value < 0)
+get_sentiments(lexicon = "afinn") %>% filter(value == 0)
+
+bing_tweets_score <- clean_Text_stem %>% inner_join(get_sentiments(lexicon = "afinn")) %>% ungroup()
+```
+
+```{r}
+neutral <- length(which(bing_tweets_score$value == 0))
+positive <- length(which(bing_tweets_score$value > 0))
+negative <- length(which(bing_tweets_score$value < 0))
+Sentiment <- c("Positive","Neutral","Negative")
+Count <- c(positive,neutral,negative)
+output <- data.frame(Sentiment,Count)
+output$Sentiment<-factor(output$Sentiment,levels=Sentiment)
+
+#If score is 0 then neutral
+#>0 +ve
+#<0 -ve
+#Declared Sentiment array.
+#Count total positives total negatives total neutrals and store in output variable as a dataframe.
+#Setting Sentiments attribute in output variable to Sentiment levels.
+
+ggplot(output, aes(x=Sentiment,y=Count))+
+  geom_bar(stat = "identity", aes(fill = Sentiment))+
+  ggtitle("Barplot of Sentiment type of harrasment tweets")
+
+```
+#Using ggplot module to plot the graph.
+#Taking x coordinates as Sentiment column
+#Y coordinates as Counts column (+ve, -ve, neutral)
+#Showing all 3 values in bar chart with geom_bar
+#Ggtitle adds the name at the bottom or top.
+
+write.csv(total_tweets, "total_tweets.csv")
+
+
+
+
+
